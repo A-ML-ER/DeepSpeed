@@ -207,14 +207,22 @@ class DeepSpeedZeRoOffload(object):
         self.persistent_parameters = self.mark_persistent_parameters(self.param_numel_persistence_threshold,
                                                                      self.model_persistence_threshold)
 
+        print_rank_0(f' after mark_persistent_parameters ',force=False)
         self.param_coordinators = {}
         self._prefetch_bucket_sz = int(prefetch_bucket_size)
+        print_rank_0(f' _prefetch_bucket_sz {self._prefetch_bucket_sz}', force=False)
         self._max_reuse_distance_in_numel = int(max_reuse_distance)
+        print_rank_0(f' self._max_reuse_distance_in_numel  {self._max_reuse_distance_in_numel}', force=False)
         self._max_available_parameters_in_numel = int(max_live_parameters)
+        print_rank_0(f' self._max_reuse_distance_in_numel  {self._max_available_parameters_in_numel} ', force=False)
+
         self.__allgather_stream = get_accelerator().Stream() if overlap_comm else get_accelerator().default_stream()
+        print_rank_0(f'  ------------------ success : get_accelerator().Stream()  ', force=False)
 
         self.forward_hooks = []
         self.backward_hooks = []
+
+        print_rank_0(f'  ------------------ before setup_zero_stage3_hooks()  ', force=False)
         self.setup_zero_stage3_hooks()
         print_rank_0(
             f'Created module hooks: forward = {len(self.forward_hooks)}, backward = {len(self.backward_hooks)}',

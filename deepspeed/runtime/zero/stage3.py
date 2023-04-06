@@ -857,21 +857,35 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                 self._optimizer_states_and_gradient_swap_in(i, timer_names)
 
             if self.offload_optimizer and not swappable_optimizer_subgroup:
+                print_rank_0(f"  self.offload_optimizer  {self.offload_optimizer} ", force=True)
                 subgroup_gradient_buffer = torch.zeros(num_elements, dtype=gradient_dtype, device=self.device)
+                print_rank_0(f" {i} / {num_subgroups} , device : {self.device},  subgroup_gradient_buffer  success ", force=True)
+
                 if self.offload_optimizer_pin_memory:
+                    print_rank_0( f" {i} / {num_subgroups} , pin_memory  ----- get_accelerator().pin_memory(subgroup_gradient_buffer) ", force=True)
                     subgroup_gradient_buffer = get_accelerator().pin_memory(subgroup_gradient_buffer)
+                    print_rank_0( f" {i} / {num_subgroups} , Success ,  get_accelerator().pin_memory(subgroup_gradient_buffer) ", force=True)
+
 
                 self.fp32_partitioned_groups_flat[i].grad = subgroup_gradient_buffer
             else:
                 self.fp32_partitioned_groups_flat[i].grad = gradient_buffer.narrow(0, 0, num_elements)
 
+            print_rank_0(f" {i} / {num_subgroups} , self._optimizer_step", force=True)
             self._optimizer_step(i)
+            print_rank_0(f" {i} / {num_subgroups} , Success self._optimizer_step ", force=True)
 
             if swappable_param_subgroup:
+                print_rank_0(f" {i} / {num_subgroups} , self._partitioned_params_swap_out ", force=True)
                 self._partitioned_params_swap_out(i)
+                print_rank_0(f" {i} / {num_subgroups} , Success self._partitioned_params_swap_out ", force=True)
+
 
             if swappable_optimizer_subgroup:
+                print_rank_0(f" {i} / {num_subgroups} , self.swappable_optimizer_subgroup ", force=True)
                 self._optimizer_states_and_gradient_swap_out(i, timer_names)
+                print_rank_0(f" {i} / {num_subgroups} , Success  -- self.swappable_optimizer_subgroup ", force=True)
+
 
             see_memory_usage(
                 f'[End] Initialize optimizer states {i} / {num_subgroups} subgroups, num_elems: {num_elements}, swappable opt/param:{swappable_optimizer_subgroup}/{swappable_param_subgroup}',

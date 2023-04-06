@@ -97,7 +97,11 @@ class CommsLogger:
     # Add log entry
     def append(self, raw_name, record_name, latency, msg_size):
         import deepspeed.comm as dist
+
+        print_rank_0(f"  - !!!  algbw, busbw = calc_bw_log(raw_name, msg_size, latency)  ----- ", force=True)
         algbw, busbw = calc_bw_log(raw_name, msg_size, latency)
+        print_rank_0(f"  - !!!   calc_bw_log     success !   ----- algbw :  {algbw}  , busbw : {busbw}   !!", force=True)
+
         if record_name in self.comms_dict.keys():
             # If this comm_op has already been logged with this message size, just add to existing record
             if msg_size in self.comms_dict[record_name].keys():

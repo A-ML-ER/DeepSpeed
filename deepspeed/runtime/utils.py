@@ -767,7 +767,7 @@ def empty_cache():
     get_accelerator().empty_cache()
 
 
-def see_memory_usage(message, force=False):
+def see_memory_usage(message, force=True):
     if not force:
         return
     if dist.is_initialized() and not dist.get_rank() == 0:

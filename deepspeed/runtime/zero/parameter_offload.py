@@ -102,7 +102,7 @@ class ZeROOrderedDict(OrderedDict):
             if self._parent_module._parameters._in_forward:
                 register_external_parameter(FWD_MODULE_STACK[-1], param)
                 param.all_gather()
-                print_rank_0(f'Registering external parameter from getter {key} ds_id = {param.ds_id}', force=False)
+                print_rank_0(f'Registering external parameter from getter {key} ds_id = {param.ds_id}', force=True)
 
         return param
 
@@ -184,7 +184,7 @@ class DeepSpeedZeRoOffload(object):
 
         see_memory_usage("DeepSpeedZeRoOffload initialize [begin]", force=True)
 
-        print_rank_0(f"initialized {__class__.__name__} with args: {locals()}", force=False)
+        print_rank_0(f"initialized {__class__.__name__} with args: {locals()}", force=True)
 
         self.module = module
         self.dtype = list(module.parameters())[0].dtype
@@ -204,29 +204,33 @@ class DeepSpeedZeRoOffload(object):
 
         self.param_numel_persistence_threshold = int(param_persistence_threshold)
         self.model_persistence_threshold = int(model_persistence_threshold)
+        print_rank_0(f" @@@@@ mark_persistent_parameters params ------------- ", force=True)
         self.persistent_parameters = self.mark_persistent_parameters(self.param_numel_persistence_threshold,
                                                                      self.model_persistence_threshold)
 
-        print_rank_0(f' after mark_persistent_parameters ',force=False)
+        print_rank_0(f" after mark_persistent_parameters ", force=True)
         self.param_coordinators = {}
         self._prefetch_bucket_sz = int(prefetch_bucket_size)
-        print_rank_0(f' _prefetch_bucket_sz {self._prefetch_bucket_sz}', force=False)
+        print_rank_0(f' _prefetch_bucket_sz {self._prefetch_bucket_sz}', force=True)
         self._max_reuse_distance_in_numel = int(max_reuse_distance)
-        print_rank_0(f' self._max_reuse_distance_in_numel  {self._max_reuse_distance_in_numel}', force=False)
+        print_rank_0(f' self._max_reuse_distance_in_numel  {self._max_reuse_distance_in_numel}', force=True)
         self._max_available_parameters_in_numel = int(max_live_parameters)
-        print_rank_0(f' self._max_reuse_distance_in_numel  {self._max_available_parameters_in_numel} ', force=False)
+        print_rank_0(f' self._max_reuse_distance_in_numel  {self._max_available_parameters_in_numel} ', force=True)
 
         self.__allgather_stream = get_accelerator().Stream() if overlap_comm else get_accelerator().default_stream()
-        print_rank_0(f'  ------------------ success : get_accelerator().Stream()  ', force=False)
+        print_rank_0(f"  ------------------ success : get_accelerator().Stream()  ", force=True)
 
         self.forward_hooks = []
         self.backward_hooks = []
 
-        print_rank_0(f'  ------------------ before setup_zero_stage3_hooks()  ', force=False)
+        print_rank_0(f'  ------------------ before setup_zero_stage3_hooks()  ', force=True)
+        see_memory_usage("setup_zero_stage3_hooks [begin]", force=True)
         self.setup_zero_stage3_hooks()
+        print_rank_0(f'  ---------!!--------- after  setup_zero_stage3_hooks()  ', force=True)
+        see_memory_usage("setup_zero_stage3_hooks [end]", force=True)
         print_rank_0(
             f'Created module hooks: forward = {len(self.forward_hooks)}, backward = {len(self.backward_hooks)}',
-            force=False)
+            force=True)
 
         see_memory_usage("DeepSpeedZeRoOffload initialize [end]", force=True)
 
@@ -288,10 +292,12 @@ class DeepSpeedZeRoOffload(object):
             hook.remove()
 
         print_rank_0(f'Deleted module hooks: forward = {num_forward_hooks}, backward = {num_backward_hooks}',
-                     force=False)
+                     force=True)
 
     def setup_zero_stage3_hooks(self):
         self.hierarchy = 0
+
+        print_rank_0(f' setup_zero_stage3_hooks ', force=True)
 
         #reset step if in inference mode
         @instrument_w_nvtx
@@ -299,13 +305,23 @@ class DeepSpeedZeRoOffload(object):
 
             if not torch._C.is_grad_enabled():
                 self.get_param_coordinator(training=False).reset_step()
+                print_rank_0(f' setup_zero_stage3_hooks ', force=True)
 
         #likely one of them should be enough but just to be safe
+        print_rank_0(f"  ----  _register_hooks_recursively  ----- ", force=True)
+
         self._register_hooks_recursively(self.module)
+
+        print_rank_0(f"  ----  register_forward_hook  ----- ", force=True)
+
         self.module.register_forward_hook(_end_of_forward_hook)
 
         # Add top module to stack trace
         global FWD_MODULE_STACK
+        print_rank_0(f"  ----  global FWD_MODULE_STACK  ----- ", force=True)
+
+        print_rank_0(f"  ----  FWD_MODULE_STACK.append(self.module)  ----- ", force=True)
+        see_memory_usage("FWD_MODULE_STACK.append [begin]", force=True)
         FWD_MODULE_STACK.append(self.module)
 
     def mark_persistent_parameters(self, param_threshold, model_threshold):
@@ -332,10 +348,12 @@ class DeepSpeedZeRoOffload(object):
         my_count = count[0]
         module.id = my_count
 
+        print_rank_0(f" _register_hooks_recursively: {module.__class__} : {module.id} ", force=True)
         #print(f"{module.__class__} : {module.id}")
 
         for child in module.children():
             count[0] = count[0] + 1
+            print_rank_0(f" child in module.children()  count[0] = count[0] + 1    , count[0] :  {count[0]} ", force=True)
             self._register_hooks_recursively(child, count=count)
 
         @instrument_w_nvtx
@@ -370,18 +388,19 @@ class DeepSpeedZeRoOffload(object):
                     register_external_parameter(module_to_register, actual_external_param)
                     print_rank_0(
                         f'Registering dangling parameter for module {module_to_register.__class__.__name__}, ds_id = {actual_external_param.ds_id}.',
-                        force=False)
+                        force=True)
 
                     # It's possible that the parameter was already external to the completed module. If so, remove it the
                     # registration as it will be covered by the outer module instead.
                     if key in module._external_params:
                         print_rank_0(
                             f'  Unregistering nested dangling parameter from module {module.__class__.__name__}, ds_id = {actual_external_param.ds_id}',
-                            force=False)
+                            force=True)
                         unregister_external_parameter(module, actual_external_param)
 
                     actual_external_param.all_gather()
 
+            print_rank_0(f" self.post_sub_module_forward_function  ", force=True)
             self.post_sub_module_forward_function(module)
 
         def _pre_backward_module_hook(module, inputs, output):
@@ -443,7 +462,7 @@ class DeepSpeedZeRoOffload(object):
 
     @torch.no_grad()
     def pre_sub_module_forward_function(self, sub_module):
-        see_memory_usage(f"Before sub module function {sub_module.__class__.__name__}", force=False)
+        see_memory_usage(f"Before sub module function {sub_module.__class__.__name__}", force=True)
 
         global FWD_MODULE_STACK
         FWD_MODULE_STACK.append(sub_module)
@@ -454,18 +473,18 @@ class DeepSpeedZeRoOffload(object):
             param_coordinator.record_module(sub_module)
         param_coordinator.fetch_sub_module(sub_module)
 
-        see_memory_usage(f"Before sub module function {sub_module.__class__.__name__} after fetch", force=False)
+        see_memory_usage(f"Before sub module function {sub_module.__class__.__name__} after fetch", force=True)
 
     @torch.no_grad()
     def post_sub_module_forward_function(self, sub_module):
         see_memory_usage(f"After sub module function {sub_module.__class__.__name__} {sub_module.id} before release",
-                         force=False)
+                         force=True)
 
         param_coordinator = self.get_param_coordinator(training=sub_module.training)
         param_coordinator.release_sub_module(sub_module)
 
         see_memory_usage(f"After sub module function {sub_module.__class__.__name__}  {sub_module.id} after release",
-                         force=False)
+                         force=True)
 
     @torch.no_grad()
     def pre_sub_module_backward_function(self, sub_module):
@@ -479,10 +498,10 @@ class DeepSpeedZeRoOffload(object):
     def post_sub_module_backward_function(self, sub_module):
         see_memory_usage(
             f"After sub module backward function {sub_module.__class__.__name__} {sub_module.id} before release",
-            force=False)
+            force=True)
 
         self.get_param_coordinator(training=sub_module.training).release_sub_module(sub_module)
 
         see_memory_usage(
             f"After sub module backward function {sub_module.__class__.__name__} {sub_module.id} after release",
-            force=False)
+            force=True)

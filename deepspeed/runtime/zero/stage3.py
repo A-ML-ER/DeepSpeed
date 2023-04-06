@@ -30,7 +30,7 @@ from deepspeed.ops.op_builder import UtilsBuilder
 pg_correctness_test = False
 
 
-def print_rank_0(message, debug=False, force=False):
+def print_rank_0(message, debug=False, force=True):
     rank = dist.get_rank()
     if rank == 0 and (debug or force):
         print(message)
@@ -107,7 +107,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
         see_memory_usage("Stage 3 initialize beginning", force=True)
 
-        print_rank_0(f"initialized {__class__.__name__} with args: {locals()}", force=False)
+        print_rank_0(f"initialized {__class__.__name__} with args: {locals()}", force=True)
 
         if dist.get_rank() == 0:
             logger.info(f"Reduce bucket size {reduce_bucket_size}")
@@ -299,7 +299,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             max([max(tensor.numel(), tensor.ds_numel) for tensor in fp16_partitioned_group])
             for fp16_partitioned_group in self.fp16_partitioned_groups
         ])
-        print_rank_0(f'Largest partitioned param numel = {largest_partitioned_param_numel}', force=False)
+        print_rank_0(f'Largest partitioned param numel = {largest_partitioned_param_numel}', force=True)
 
         self._setup_for_real_optimizer()
         self.grad_position = {}
@@ -458,11 +458,14 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             self.max_params_in_cpu = offload_param_config.max_in_cpu
             print_rank_0(
                 f"FP16 params swapping is {self.params_in_nvme_and_cpu}, Max params in CPU is {self.max_params_in_cpu}",
-                force=False)
+                force=True)
 
     def _configure_tensor_swapping(self, offload_optimizer_config, aio_config):
+        print_rank_0(" _configure_tensor_swapping ", force=True)
         nvme_swap_folder = os.path.join(offload_optimizer_config.nvme_path, 'zero_stage_3')
         os.makedirs(nvme_swap_folder, exist_ok=True)
+        print_rank_0(" nvme_swap_folder  :  {nvme_swap_folder} ", force=True)
+
         if dist.get_rank() == 0:
             logger.info(f'Tensor Swapping: Adding optimizer tensors')
 
@@ -530,11 +533,11 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             aggregate_params_count += params_in_group
 
             if flat_buffer_size > 0:
-                print_rank_0(f"group {j} flat buffer size {flat_buffer_size}", force=False)
+                print_rank_0(f"group {j} flat buffer size {flat_buffer_size}", force=True)
                 self.param_groups_fp16_flat_cpu_memory.append(get_accelerator().pin_memory(
                     torch.empty(int(flat_buffer_size), dtype=self.dtype)))
             else:
-                print_rank_0(f"No flat buffer size. Param group size was  {params_in_group}", force=False)
+                print_rank_0(f"No flat buffer size. Param group size was  {params_in_group}", force=True)
 
                 self.param_groups_fp16_flat_cpu_memory.append(torch.empty(1, dtype=self.dtype))
 
@@ -595,11 +598,11 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                             0, flat_offset, total_elements)
                         print_rank_0(
                             f"Creating a flat buffer for subgroup {i} requiring {total_elements} elements, and cumulative CPU elements {flat_offset + total_elements}",
-                            force=False)
+                            force=True)
 
                     elif self.params_in_nvme_and_cpu:
                         fp16_partitioned_group_flat = None
-                        print_rank_0(f"No flat buffer for sub group {i} of {total_elements} elements", force=False)
+                        print_rank_0(f"No flat buffer for sub group {i} of {total_elements} elements", force=True)
                     else:
                         assert False, "Either params are in nvme, or they are in CPU memory. This code path should not be triggered. Please see you max_params_in_cpu and params_in_nvme configs"
 
@@ -742,18 +745,18 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
         nvme_gigabytes = nvme_memory_usage / GIGA_BYTES
         print_rank_0(f'Swappable FP32 Partitions: count={num_swappable_partitions} size={nvme_gigabytes:5.2f} GB',
-                     force=False)
+                     force=True)
         if self.params_in_nvme_and_cpu:
             print_rank_0(
                 f'Swap from NVMe Partitions: count = {num_swap_from_nvme_partitions}, size = {swap_from_nvme_memory_usage/GIGA_BYTES:5.2f}GB',
-                force=False)
+                force=True)
             print_rank_0(
                 f'Swap from CPU Partitions: count = {num_swap_from_cpu_partitions}, size = {swap_from_cpu_memory_usage/GIGA_BYTES:5.2f}GB',
-                force=False)
+                force=True)
 
         cpu_memory_gigabytes = cpu_memory_usage / GIGA_BYTES
         print_rank_0(f'In-Memory FP32 Partitions: count={cpu_memory_sub_groups} size={cpu_memory_gigabytes:5.2f} GB',
-                     force=False)
+                     force=True)
 
         # Clear for on-the-fly population before the optimizer step
         for param_group in self.optimizer.param_groups:

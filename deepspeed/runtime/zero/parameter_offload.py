@@ -28,6 +28,8 @@ warned = False
 
 #apply torch.autograd.Function that calls a backward_function to tensors in output
 def _apply_to_tensors_only(module, functional, backward_function, outputs):
+    print_rank_0(f" _apply_to_tensors_only ", force=True)
+
     if isinstance(outputs, (tuple, list)):
         touched_outputs = []
         for output in outputs:
@@ -62,6 +64,8 @@ def _apply_to_tensors_only(module, functional, backward_function, outputs):
 
 #for each tensor in outputs run the forward_function and register backward_function as hook
 def _apply_forward_and_backward_to_tensors_only(module, forward_function, backward_function, outputs):
+    print_rank_0(f" _apply_forward_and_backward_to_tensors_only ", force=True)
+
     if type(outputs) is tuple:
         touched_outputs = []
         for output in outputs:
@@ -125,6 +129,7 @@ class PreBackwardFunction(torch.autograd.Function):
     def forward(ctx, module, pre_backward_function, outputs):
         ctx.module = module
         ctx.pre_backward_function = pre_backward_function
+        print_rank_0(f" forward(ctx, module, pre_backward_function, outputs) ", force=True)
         if not hasattr(module, "applied_pre_backward_ref_cnt"):
             module.applied_pre_backward_ref_cnt = 0
         module.applied_pre_backward_ref_cnt += 1
@@ -135,6 +140,7 @@ class PreBackwardFunction(torch.autograd.Function):
     @staticmethod
     def backward(ctx, *args):
         #print(f"Before Backward: {ctx.module.__class__.__name__}")
+        print_rank_0(f" Before Backward: {ctx.module.__class__.__name__} ", force=True)
         ctx.pre_backward_function(ctx.module)
         return (None, None) + args
 
@@ -233,18 +239,22 @@ class DeepSpeedZeRoOffload(object):
             force=True)
 
         see_memory_usage("DeepSpeedZeRoOffload initialize [end]", force=True)
+        print_rank_0(f'see_memory_usage DeepSpeedZeRoOffload initialize [end] success!' , force=True)
 
     @instrument_w_nvtx
     def partition_all_parameters(self):
         """Partitioning Parameters that were not partitioned usually if parameters
         of modules whose input parameters do not require grad computation do not
         trigger post call and will therefore will remain unpartitioned"""
+        print_rank_0(f" def partition_all_parameters  ", force=True)
+
         self.get_param_coordinator(training=self.module.training).release_and_reset_all(self.module)
         for param in iter_params(self.module, recurse=True):
             if param.ds_status != ZeroParamStatus.NOT_AVAILABLE:
                 raise RuntimeError(f"{param.ds_summary()} expected to be released")
 
     def get_param_coordinator(self, training):
+        print_rank_0(f" def get_param_coordinator  ", force=True)
         if not training in self.param_coordinators:
             self.param_coordinators[training] = PartitionedParameterCoordinator(
                 prefetch_bucket_sz=self._prefetch_bucket_sz,
@@ -257,9 +267,11 @@ class DeepSpeedZeRoOffload(object):
         return self.param_coordinators[training]
 
     def empty_partition_cache(self):
+        print_rank_0(f" def empty_partition_cache ", force=True)
         self.partition_all_parameters()
 
     def _convert_to_zero_parameters(self, ds_config, module, mpu):
+        print_rank_0(f" def _convert_to_zero_parameters ", force=True)
         non_zero_params = [p for p in module.parameters() if not is_zero_param(p)]
         if non_zero_params:
             zero_params = [p for p in module.parameters() if is_zero_param(p)]
@@ -282,6 +294,7 @@ class DeepSpeedZeRoOffload(object):
         self._remove_module_hooks()
 
     def _remove_module_hooks(self):
+        print_rank_0(f" def _remove_module_hooks  ", force=True)
         num_forward_hooks = len(self.forward_hooks)
         num_backward_hooks = len(self.backward_hooks)
 
@@ -325,6 +338,8 @@ class DeepSpeedZeRoOffload(object):
         FWD_MODULE_STACK.append(self.module)
 
     def mark_persistent_parameters(self, param_threshold, model_threshold):
+        print_rank_0(f" def mark_persistent_parameters  ", force=True)
+
         persistent_params = []
         total_persistent_parameters = 0
         params_count = 0
@@ -353,7 +368,7 @@ class DeepSpeedZeRoOffload(object):
 
         for child in module.children():
             count[0] = count[0] + 1
-            print_rank_0(f" child in module.children()  count[0] = count[0] + 1    , count[0] :  {count[0]} ", force=True)
+            print_rank_0(f" module.children() child : {child} , count[0] :  {count[0]}  , _register_hooks_recursively ", force=True)
             self._register_hooks_recursively(child, count=count)
 
         @instrument_w_nvtx
@@ -404,6 +419,8 @@ class DeepSpeedZeRoOffload(object):
             self.post_sub_module_forward_function(module)
 
         def _pre_backward_module_hook(module, inputs, output):
+
+            print_rank_0(f" _pre_backward_module_hook  ", force=True)
 
             @instrument_w_nvtx
             def _run_before_backward_function(sub_module):
@@ -462,6 +479,8 @@ class DeepSpeedZeRoOffload(object):
 
     @torch.no_grad()
     def pre_sub_module_forward_function(self, sub_module):
+        print_rank_0(f" pre_sub_module_forward_function  ", force=True)
+
         see_memory_usage(f"Before sub module function {sub_module.__class__.__name__}", force=True)
 
         global FWD_MODULE_STACK
@@ -477,6 +496,8 @@ class DeepSpeedZeRoOffload(object):
 
     @torch.no_grad()
     def post_sub_module_forward_function(self, sub_module):
+        print_rank_0(f" post_sub_module_forward_function  ", force=True)
+
         see_memory_usage(f"After sub module function {sub_module.__class__.__name__} {sub_module.id} before release",
                          force=True)
 
@@ -488,6 +509,8 @@ class DeepSpeedZeRoOffload(object):
 
     @torch.no_grad()
     def pre_sub_module_backward_function(self, sub_module):
+        print_rank_0(f" pre_sub_module_backward_function  ", force=True)
+
         param_coordinator = self.get_param_coordinator(training=sub_module.training)
         param_coordinator.trace_prologue(sub_module)
         if param_coordinator.is_record_trace():
@@ -496,6 +519,8 @@ class DeepSpeedZeRoOffload(object):
 
     @torch.no_grad()
     def post_sub_module_backward_function(self, sub_module):
+        print_rank_0(f" post_sub_module_backward_function  ", force=True)
+
         see_memory_usage(
             f"After sub module backward function {sub_module.__class__.__name__} {sub_module.id} before release",
             force=True)

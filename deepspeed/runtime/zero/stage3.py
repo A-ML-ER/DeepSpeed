@@ -803,7 +803,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self.optimizer.step()
         print_rank_0(f' Success self.optimizer.step() : {sub_group_id} ', force=True)
         self.optimizer.param_groups[param_group_id]['params'] = []
-        print_rank_0(f' Success self.optimizer.param_groups : {sub_group_id} ', force=True)
+        print_rank_0(f' Success self.optimizer.param_groups :  ---  sub_group_id : {sub_group_id}  param_group_id:  {param_group_id}', force=True)
 
 
     def _swappable_optimizer_subgroup(self, sub_group_id):
@@ -832,6 +832,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             offset += partitioned_param.ds_numel
 
         if len(swap_fp16_params):
+            print_rank_0(f' len(swap_fp16_params) ', force=True)
             swap_fp16_params[0].nvme_swapper.swap_out_partitioned_params(dst_fp16_params=swap_fp16_params,
                                                                          src_fp32_params=swap_fp32_params)
 

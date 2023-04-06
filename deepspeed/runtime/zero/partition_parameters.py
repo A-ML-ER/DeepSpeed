@@ -243,6 +243,7 @@ empty_buffers = {}
 class InsertPostInitMethodToModuleSubClasses(object):
 
     def __init__(self, enabled=True, mem_efficient_linear=True, ds_config=None, dtype=None):
+        print_rank_0(f' InsertPostInitMethodToModuleSubClasses !!!  __init__    ', force=True)
         self.mem_efficient_linear = mem_efficient_linear
         self.enabled = enabled
         self._set_dtype(ds_config, dtype)
@@ -251,10 +252,14 @@ class InsertPostInitMethodToModuleSubClasses(object):
         ], f"Invalid data type {self.dtype}, allowed values are [torch.half, torch.bfloat16, torch.float]"
 
     def __enter__(self):
+        print_rank_0(f' InsertPostInitMethodToModuleSubClasses !!!  __enter__    ', force=True)
         global zero_init_enabled
+        print_rank_0(f' global zero_init_enabled , zero_init_enabled : {zero_init_enabled} ', force=True)
         if not self.enabled:
             return
         zero_init_enabled = True
+        print_rank_0(f' zero_init_enabled = True  ', force=True)
+
 
         def apply_with_gather(orig_module_apply_fn: Callable) -> Callable:
             """many models make use of child modules like Linear or Embedding which
@@ -632,6 +637,8 @@ class Init(InsertPostInitMethodToModuleSubClasses):
 
         _ds_config = deepspeed.runtime.config.DeepSpeedConfig(config_dict_or_path,
                                                               mpu) if config_dict_or_path is not None else None
+        print_rank_0(f' _ds_config ', force=True)
+
         super().__init__(enabled=enabled, mem_efficient_linear=mem_efficient_linear, ds_config=_ds_config, dtype=dtype)
         if not dist.is_initialized():
             init_distributed()

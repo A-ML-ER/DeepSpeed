@@ -378,7 +378,10 @@ class Autotuner:
             replace_dict(exp_config, config)
 
             # if the config does not use offloading, remove the offloading section
+            print_rank_0(f' config_zero = config.get(ZERO_OPTIMIZATION, None) ', force=True)
             config_zero = config.get(ZERO_OPTIMIZATION, None)
+            print_rank_0(f' success  config_zero = config.get(ZERO_OPTIMIZATION, None) ', force=True)
+
             if config_zero:
                 if OFFLOAD_OPTIMIZER not in config_zero and OFFLOAD_OPTIMIZER in exp_config[ZERO_OPTIMIZATION]:
                     del exp_config[ZERO_OPTIMIZATION][OFFLOAD_OPTIMIZER]
@@ -421,8 +424,11 @@ class Autotuner:
 
         logger.info(f"The model has {number_to_string(self.get_model_num_params())} parameters.")
 
+        print_rank_0(f"The model has {number_to_string(self.get_model_num_params())} parameters.", force=True)
+
         self.gpu_mem = self.get_gpu_memory_info()
         logger.info(f"Memory per GPU in the system is {memory_to_string(self.gpu_mem, postfix='B')}.")
+        print_rank_0(f"Memory per GPU in the system is {memory_to_string(self.gpu_mem, postfix='B')}.", force=True)
 
         self.activation_mem = self.get_activation_memory_per_gpu()
         logger.info(

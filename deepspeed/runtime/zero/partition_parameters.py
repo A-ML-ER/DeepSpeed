@@ -258,7 +258,7 @@ class InsertPostInitMethodToModuleSubClasses(object):
         if not self.enabled:
             return
         zero_init_enabled = True
-        print_rank_0(f' zero_init_enabled = True  ', force=True)
+        print_rank_0(f' zero_init_enabled = True , set !!!!! ', force=True)
 
 
         def apply_with_gather(orig_module_apply_fn: Callable) -> Callable:

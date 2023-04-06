@@ -792,12 +792,19 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             self.ipg_buffer = None
 
     def _optimizer_step(self, sub_group_id):
+        print_rank_0(f'  _optimizer_step  ', force=True)
         param_group_id = self.sub_group_to_group_id[sub_group_id]
+        print_rank_0(f' self.sub_group_to_group_id[sub_group_id] : {param_group_id} ', force=True)
+
         fp32_param = self.fp32_partitioned_groups_flat[sub_group_id]
         self.optimizer.param_groups[param_group_id]['params'] = [fp32_param]
 
+        print_rank_0(f'  self.optimizer.step() : {sub_group_id} ', force=True)
         self.optimizer.step()
+        print_rank_0(f' Success self.optimizer.step() : {sub_group_id} ', force=True)
         self.optimizer.param_groups[param_group_id]['params'] = []
+        print_rank_0(f' Success self.optimizer.param_groups : {sub_group_id} ', force=True)
+
 
     def _swappable_optimizer_subgroup(self, sub_group_id):
         if not self.swap_optimizer:
@@ -807,6 +814,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                                                        numel=self.fp16_partitioned_groups_flat_numel[sub_group_id])
 
     def _partitioned_params_swap_out(self, i):
+        print_rank_0(f'_partitioned_params_swap_out', force=True)
         offset = 0
         fp32_param = self.fp32_partitioned_groups_flat[i]
         assert fp32_param is not None, \
@@ -828,6 +836,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                                                                          src_fp32_params=swap_fp32_params)
 
     def initialize_optimizer_states(self):
+        print_rank_0(f'   initialize_optimizer_states ', force=True)
         num_subgroups = len(self.fp16_groups)
 
         largest_numel = max([sum([p.ds_numel for p in psg]) for psg in self.fp16_partitioned_groups])
@@ -835,12 +844,14 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         gradient_buffer = torch.zeros(int(largest_numel), dtype=gradient_dtype, device=self.device)
 
         timer_names = set()
+        print_rank_0(f'   timer_names = set() ', force=True)
 
         if self.swap_optimizer:
             self.optimizer_swapper.init_timers()
 
         INIT_OPTIMIZER_TIMER = 'init_optimizer_state'
         timer_names.add(INIT_OPTIMIZER_TIMER)
+        print_rank_0(f'  timer_names.add(INIT_OPTIMIZER_TIMER) ', force=True)
         self.start_timers([INIT_OPTIMIZER_TIMER])
 
         for i, group in enumerate(self.fp16_groups):
@@ -891,7 +902,9 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                 f'[End] Initialize optimizer states {i} / {num_subgroups} subgroups, num_elems: {num_elements}, swappable opt/param:{swappable_optimizer_subgroup}/{swappable_param_subgroup}',
                 force=True)
 
+        print_rank_0(f" self.stop_timers([INIT_OPTIMIZER_TIMER]) ", force=True)
         self.stop_timers([INIT_OPTIMIZER_TIMER])
+        print_rank_0(f" self.log_timers(timer_names) ", force=True)
         self.log_timers(timer_names)
 
         if self.swap_optimizer:

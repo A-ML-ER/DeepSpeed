@@ -573,16 +573,23 @@ def init_distributed(dist_backend=None,
     else:
         # Initialize torch distributed if needed
         required_env = ["RANK", "WORLD_SIZE", "MASTER_ADDR", "MASTER_PORT", "LOCAL_RANK"]
+        print(" -- os.environ -- ")
+        print(os.environ)
+        print(" -- auto_mpi_discovery -- ")
+        print(auto_mpi_discovery)
         if auto_mpi_discovery and not all(map(lambda v: v in os.environ, required_env)):
             if verbose:
                 utils.logger.info("Not using the DeepSpeed or dist launchers, attempting to detect MPI environment...")
             if in_aml() and not in_dlts():
+                print("patch_aml_env_for_torch_nccl_backend")
                 patch_aml_env_for_torch_nccl_backend(verbose=verbose)
             elif in_aws_sm():
+                print("patch_aws_sm_env_for_torch_nccl_backend")
                 patch_aws_sm_env_for_torch_nccl_backend(verbose=verbose)
             else:
                 mpi_discovery(distributed_port=distributed_port, verbose=verbose)
 
+        print("  cdb.is_initialized()  ")
         if cdb is not None and cdb.is_initialized():
             if int(os.getenv('RANK', '0')) == 0:
                 utils.logger.info('Distributed backend already initialized')
@@ -600,6 +607,10 @@ def mpi_discovery(distributed_port=TORCH_DISTRIBUTED_DEFAULT_PORT, verbose=True)
     '''
     Discovery MPI environment via mpi4py and map to relevant dist state
     '''
+    print(" ---------- mpi_discovery -------------")
+    print(" ---------- TORCH_DISTRIBUTED_DEFAULT_PORT -------------")
+    print(TORCH_DISTRIBUTED_DEFAULT_PORT)
+
     from mpi4py import MPI
     import subprocess
     comm = MPI.COMM_WORLD
@@ -614,6 +625,7 @@ def mpi_discovery(distributed_port=TORCH_DISTRIBUTED_DEFAULT_PORT, verbose=True)
     master_addr = comm.bcast(master_addr, root=0)
 
     # Determine local rank by assuming hostnames are unique
+    print(" ---------- proc_name = MPI.Get_processor_name() -------------")
     proc_name = MPI.Get_processor_name()
     all_procs = comm.allgather(proc_name)
     local_rank = sum([i == proc_name for i in all_procs[:rank]])

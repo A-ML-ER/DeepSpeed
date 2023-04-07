@@ -587,7 +587,9 @@ def init_distributed(dist_backend=None,
                 print("patch_aws_sm_env_for_torch_nccl_backend")
                 patch_aws_sm_env_for_torch_nccl_backend(verbose=verbose)
             else:
+                print(" !!!!!  mpi_discovery(distributed_port=distributed_port, verbose=verbose)")
                 mpi_discovery(distributed_port=distributed_port, verbose=verbose)
+                print(" ---  success ---- mpi_discovery(distributed_port=distributed_port, verbose=verbose) ")
 
         print("  cdb.is_initialized()  ")
         if cdb is not None and cdb.is_initialized():

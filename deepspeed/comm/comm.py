@@ -555,7 +555,9 @@ def init_distributed(dist_backend=None,
 
     print("  dist_init_required  ")
     print(dist_init_required)
-    
+    print("  ------  ")
+
+
     if dist_init_required is None:
         dist_init_required = cdb is None or not cdb.is_initialized()
 

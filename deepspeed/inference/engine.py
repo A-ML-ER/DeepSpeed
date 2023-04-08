@@ -424,6 +424,8 @@ class InferenceEngine(Module):
 
     def _get_all_ckpt_names(self, checkpoints_path, tag):
         ckpt_file_pattern = self._get_ckpt_name(checkpoints_path, tag, mp_placeholder="*")
+        print("  _get_all_ckpt_names  ")
+
         import glob
 
         ckpt_files = glob.glob(ckpt_file_pattern)

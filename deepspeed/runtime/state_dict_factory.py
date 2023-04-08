@@ -32,13 +32,18 @@ class SDLoaderFactory:
         ckpt_list = data['checkpoints']
         version = data['version']
         ckpt_type = data.get('parallelization', 'pp')
+        print(" get_sd_loader_json ---- ckpt_type ")
+        print(ckpt_type)
         mp_size = data.get('mp_size', 0)
+        print(" get_sd_loader_json ---- mp_size ")
+        print(mp_size)
         if sd_type.lower() in ['bloom', 'ds_model']:
             return data
         return SDLoaderFactory.get_sd_loader(ckpt_list, checkpoint_engine, sd_type, version)
 
     @staticmethod
     def get_sd_loader(ckpt_list, checkpoint_engine, sd_type='Megatron', version=None):
+        print(" ----  get_sd_loader ------  ")
         if sd_type == 'Megatron':
             return MegatronSDLoader(ckpt_list, version, checkpoint_engine)
         else:

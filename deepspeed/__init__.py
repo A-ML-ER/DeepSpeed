@@ -260,6 +260,8 @@ def init_inference(model, config=None, **kwargs):
     Returns:
         A deepspeed.InferenceEngine wrapped model.
     """
+
+    print(" ---------- enter deepspeed init_reference  ---------")
     log_dist("DeepSpeed info: version={}, git-hash={}, git-branch={}".format(__version__, __git_hash__,
                                                                              __git_branch__),
              ranks=[0])
@@ -277,13 +279,19 @@ def init_inference(model, config=None, **kwargs):
 
     # Update with values from kwargs, ensuring no conflicting overlap between config and kwargs
     overlap_keys = set(config_dict.keys()).intersection(kwargs.keys())
+    print(" ----------     overlap_keys = set(config_dict.keys()).intersection(kwargs.keys()) ---------")
+    print(overlap_keys)
     # If there is overlap, error out if values are different
     for key in overlap_keys:
         if config_dict[key] != kwargs[key]:
             raise ValueError(f"Conflicting argument '{key}' in 'config':{config_dict[key]} and kwargs:{kwargs[key]}")
     config_dict.update(kwargs)
+    print(" ----------    config_dict.update(kwargs)   ---------")
+    print(config_dict)
 
     ds_inference_config = DeepSpeedInferenceConfig(**config_dict)
+    print(" ----------    ds_inference_config = DeepSpeedInferenceConfig(**config_dict)   ---------")
+    print(ds_inference_config)
 
     engine = InferenceEngine(model, config=ds_inference_config)
 

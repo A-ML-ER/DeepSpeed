@@ -107,6 +107,12 @@ class InferenceEngine(Module):
         self._config = config
 
         self._get_model_config_generate(config)  # keep for weird backward compatibility
+        print(" ----  self._get_model_config_generate(config)   -------")
+        print(self._config)
+        print(" ----  self.module   -------")
+        print(self.module)
+
+
 
         # patch model generate with ours if model uses it
         if hasattr(self.module, "generate"):
@@ -118,6 +124,8 @@ class InferenceEngine(Module):
         # todo: keep this self.injection_dict because we don't use to change config.injection_policy API
         # todo: this will get changed when Molly's PR on auto injection dict is merged
         self.injection_dict = config.injection_policy
+        print(" ----          self.injection_dict = config.injection_policy   -------")
+        print(self.injection_dict)
 
         # todo: refactor the mp_group and mp_size related in the next refactor
         self.mp_group = config.tensor_parallel.tp_group
@@ -132,10 +140,16 @@ class InferenceEngine(Module):
         self.expert_mp_group = None  # config.moe.ep_mp_group
 
         self.cuda_graph_created = False
+        print(" ----   before  self.checkpoint_engine = TorchCheckpointEngine()  -------")
         self.checkpoint_engine = TorchCheckpointEngine()
+        print(" ----   success  self.checkpoint_engine = TorchCheckpointEngine()  -------")
+
         quantization_setting = None
         self._init_quantization_setting(
             quantization_setting)  # todo: update with the new quant config for weight quant
+        print(" --------    self._init_quantization_setting(quantization_setting) ----- ")
+        print(quantization_setting)
+
         self.model_profile_enabled = False
         self._model_times = []
 
@@ -183,8 +197,12 @@ class InferenceEngine(Module):
             # 1. User specified Tensor Parallelism
             assert not config.replace_with_kernel_inject, "Cannot use both user specified injection policy and kernel injection"
             for client_module, injection_policy in self.injection_dict.items():
+                print("  for client_module, injection_policy in self.injection_dict.items(): " )
+                print(client_module)
+                print(injection_policy)
                 # construct the tuple and pass that instead of a string or dict.
                 if isinstance(injection_policy, str):
+                    print(" if isinstance(injection_policy, str) ")
                     config.injection_policy_tuple = (injection_policy, )
                 else:
                     config.injection_policy_tuple = injection_policy
@@ -192,9 +210,11 @@ class InferenceEngine(Module):
         else:
             if config.replace_with_kernel_inject:
                 # 2. DeepSpeed Kernel Injection
+                print(" # 2. DeepSpeed Kernel Injection ")
                 self._apply_injection_policy(config)
             else:
                 # 3. Automatic Tensor Parallelism
+                print(" -----  AutoTP.tp_parser(model) -----------")
                 parser_dict = AutoTP.tp_parser(model)
                 print("AutoTP: ", parser_dict)
                 for client_module, injection_policy in parser_dict:

@@ -61,6 +61,7 @@ def build_bloom_alibi_tensor(attention_mask: torch.Tensor, num_heads: int, dtype
     slopes = torch.pow(base, powers)
 
     if closest_power_of_2 != num_heads:
+        print("----  before  extra_base = torch.tensor")
         extra_base = torch.tensor(2**(-(2**-(math.log2(2 * closest_power_of_2) - 3))),
                                   device=attention_mask.device,
                                   dtype=torch.float32)
@@ -75,8 +76,11 @@ def build_bloom_alibi_tensor(attention_mask: torch.Tensor, num_heads: int, dtype
     # This is more or less identical to T5's relative position bias:
     # https://github.com/huggingface/transformers/blob/f681437203baa7671de3174b0fa583c349d9d5e1/src/transformers/models/t5/modeling_t5.py#L527
     arange_tensor = ((attention_mask.cumsum(dim=-1) - 1) * attention_mask)[:, None, :]
+    print("---  arange_tensor  ")
+    print(arange_tensor)
     alibi = slopes[..., None] * arange_tensor
     if dist.is_initialized():
+        print(" dist.is_initialized() ")
         num_heads_per_rank = int(num_heads / dist.get_world_size())
         offset = dist.get_rank() * num_heads_per_rank
         alibi = alibi.view(batch_size, num_heads, 1, seq_length)
@@ -228,15 +232,21 @@ class InferenceEngine(Module):
         self.module.to(device)
 
         if config.tensor_parallel.tp_size > 1:
+            print("config.tensor_parallel.tp_size > 1")
+            print(config.tensor_parallel.tp_size)
             _rng_state = get_accelerator().get_rng_state().to(get_accelerator().current_device_name())
             dist.broadcast(_rng_state, 0)
+            print("---   dist.broadcast(_rng_state, 0)")
             get_accelerator().set_rng_state(_rng_state.cpu())
+            print("-----   get_accelerator().set_rng_state(_rng_state.cpu()) ")
 
         if config.tensor_parallel.tp_size > 1:
             assert not config.enable_cuda_graph, "Cuda graph is not supported for model parallelism"
 
         # Check if local CUDA graphs can be created in replacement modules
         self.local_cuda_graph = self._local_cuda_graph_used(self.module)
+        print(" ----   self.local_cuda_graph = self._local_cuda_graph_used(self.module) ")
+        print(self.local_cuda_graph)
 
     def profile_model_time(self, use_cuda_events=True):
         if not self.model_profile_enabled and not self._config.enable_cuda_graph:

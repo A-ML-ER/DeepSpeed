@@ -213,6 +213,7 @@ def set_backend(backend_name):
 
 @timed_op
 def broadcast(tensor, src, group=None, async_op=False, prof=False, log_name='broadcast', debug=get_caller_func()):
+    print(" !!!!!!!!! broadcast !!!!!!!!!!! ")
     global cdb
     return cdb.broadcast(tensor=tensor, src=src, group=group, async_op=async_op)
 

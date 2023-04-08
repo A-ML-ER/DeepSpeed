@@ -403,17 +403,23 @@ class InferenceEngine(Module):
         load_module_recursive(r_module)
 
     def _apply_injection_policy(self, config, client_module=None):
+        print("  _apply_injection_policy ")
+        print("config")
+        print(config)
         # client_module is only passed when using the injection_dict method.
         checkpoint_dir = config.checkpoint
         checkpoint = SDLoaderFactory.get_sd_loader_json(checkpoint_dir,
                                                         self.checkpoint_engine) if checkpoint_dir is not None else None
-
+        print("  checkpoint = SDLoaderFactory.get_sd_loader_json ")
+        print("generic_injection")
         generic_injection(self.module,
                           fp16=(config.dtype == torch.half) or (config.dtype == torch.int8),
                           enable_cuda_graph=config.enable_cuda_graph)
+        print("success generic_injection")
 
         if isinstance(self.module, torch.nn.Module):
             # config is our DeepSpeedInferenceConfig and self.config is the HF model config
+            print("  onfig is our DeepSpeedInferenceConfig and self.config is the HF model config  ")
             replace_transformer_layer(client_module, self.module, checkpoint, config, self.config)
 
     def _get_all_ckpt_names(self, checkpoints_path, tag):

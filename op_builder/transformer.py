@@ -11,19 +11,24 @@ class TransformerBuilder(CUDAOpBuilder):
     NAME = "transformer"
 
     def __init__(self, name=None):
+        print(f" TransformerBuilder __init__ ")
         name = self.NAME if name is None else name
         super().__init__(name=name)
 
     def absolute_name(self):
+        print(f" TransformerBuilder absolute_name ")
+        print(f" TransformerBuilder  {self.NAME}  _op ")
         return f'deepspeed.ops.transformer.{self.NAME}_op'
 
     def extra_ldflags(self):
+        print(f" TransformerBuilder  extra_ldflags")
         if not self.is_rocm_pytorch():
             return ['-lcurand']
         else:
             return []
 
     def sources(self):
+        print(f" TransformerBuilder sources(self) ")
         return [
             'csrc/transformer/ds_transformer_cuda.cpp', 'csrc/transformer/cublas_wrappers.cu',
             'csrc/transformer/transform_kernels.cu', 'csrc/transformer/gelu_kernels.cu',
@@ -32,6 +37,7 @@ class TransformerBuilder(CUDAOpBuilder):
         ]
 
     def include_paths(self):
+        print(f" TransformerBuilder include_paths(self): ")
         includes = ['csrc/includes']
         if self.is_rocm_pytorch():
             from torch.utils.cpp_extension import ROCM_HOME

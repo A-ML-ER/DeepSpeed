@@ -13,9 +13,12 @@ class FusedAdamBuilder(CUDAOpBuilder):
     NAME = "fused_adam"
 
     def __init__(self):
+        print(" class FusedAdamBuilder(CUDAOpBuilder)  __init__")
         super().__init__(name=self.NAME)
 
     def absolute_name(self):
+        print(" class FusedAdamBuilder(CUDAOpBuilder)  absolute_name")
+        print(f"deepspeed.ops.adam.{self.NAME}_op")
         return f'deepspeed.ops.adam.{self.NAME}_op'
 
     def sources(self):
@@ -29,6 +32,7 @@ class FusedAdamBuilder(CUDAOpBuilder):
         return args + self.version_dependent_macros()
 
     def nvcc_args(self):
+        print(" class FusedAdamBuilder  nvcc_args")
         nvcc_flags = ['-O3'] + self.version_dependent_macros()
         if not self.is_rocm_pytorch():
             nvcc_flags.extend(

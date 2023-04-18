@@ -16,12 +16,15 @@ class SparseAttnBuilder(OpBuilder):
     NAME = "sparse_attn"
 
     def __init__(self):
+        print("  SparseAttnBuilder  __init__ ")
         super().__init__(name=self.NAME)
 
     def absolute_name(self):
+        print(f'deepspeed.ops.sparse_attention.{self.NAME}_op')
         return f'deepspeed.ops.sparse_attention.{self.NAME}_op'
 
     def sources(self):
+        print(f'  sources(self):  sources(self):  csrc/sparse_attention/utils.cpp')
         return ['csrc/sparse_attention/utils.cpp']
 
     def cxx_args(self):
@@ -33,6 +36,7 @@ class SparseAttnBuilder(OpBuilder):
         #command_status = list(map(self.command_exists, required_commands))
         #deps_compatible = all(command_status)
 
+        print(f' SparseAttnBuilder  is_compatible ')
         if self.is_rocm_pytorch():
             self.warning(f'{self.NAME} is not compatible with ROCM')
             return False

@@ -61,7 +61,7 @@ class FusedAdam(torch.optim.Optimizer):
                  amsgrad=False,
                  set_grad_none=True):
         print(f" FusedAdam  __init__")
-        print(f" FusedAdam  params : {params}")
+        print(f" FusedAdam  params :  .... tensor ...")
         print(f" FusedAdam  adam_w_mode : {adam_w_mode}")
         print(f" FusedAdam  amsgrad : {amsgrad}")
         print(f" FusedAdam  set_grad_none : {set_grad_none}")

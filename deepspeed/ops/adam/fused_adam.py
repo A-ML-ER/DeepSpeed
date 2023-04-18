@@ -60,20 +60,28 @@ class FusedAdam(torch.optim.Optimizer):
                  weight_decay=0.,
                  amsgrad=False,
                  set_grad_none=True):
-
+        print(f" FusedAdam  __init__")
+        print(f" FusedAdam  params : {params}")
+        print(f" FusedAdam  adam_w_mode : {adam_w_mode}")
+        print(f" FusedAdam  amsgrad : {amsgrad}")
+        print(f" FusedAdam  set_grad_none : {set_grad_none}")
         if amsgrad:
             raise RuntimeError('FusedAdam does not support the AMSGrad variant.')
         defaults = dict(lr=lr, bias_correction=bias_correction, betas=betas, eps=eps, weight_decay=weight_decay)
+        print(f" FusedAdam  defaults : {defaults}")
         super(FusedAdam, self).__init__(params, defaults)
+        print(f"  uper(FusedAdam, self).__init__(params, defaults) ")
         self.adam_w_mode = 1 if adam_w_mode else 0
         self.set_grad_none = set_grad_none
 
         fused_adam_cuda = FusedAdamBuilder().load()
+        print(f" fused_adam_cuda = FusedAdamBuilder().load() ")
         # Skip buffer
         self._dummy_overflow_buf = get_accelerator().IntTensor([0])
         self.multi_tensor_adam = fused_adam_cuda.multi_tensor_adam
 
     def zero_grad(self):
+        print(f" zero_grad : {self.set_grad_none} ")
         if self.set_grad_none:
             for group in self.param_groups:
                 for p in group['params']:
@@ -90,6 +98,9 @@ class FusedAdam(torch.optim.Optimizer):
 
         The remaining arguments are deprecated, and are only retained (for the moment) for error-checking purposes.
         """
+
+        print(f" ---   step  ------ ")
+
         if any(p is not None for p in [grads, output_params, scale, grad_norms]):
             raise RuntimeError(
                 'FusedAdam has been updated.  Simply initialize it identically to torch.optim.Adam, and call step() with no arguments.'
@@ -141,11 +152,14 @@ class FusedAdam(torch.optim.Optimizer):
                 else:
                     raise RuntimeError('FusedAdam only support fp16 and fp32.')
 
+            print(f" -- step ---  :  len(g_16)  : {len(g_16)} ")
             if (len(g_16) > 0):
                 state['step'] += 1
                 multi_tensor_applier(self.multi_tensor_adam, self._dummy_overflow_buf, [g_16, p_16, m_16, v_16],
                                      group['lr'], beta1, beta2, group['eps'], state['step'], self.adam_w_mode,
                                      bias_correction, group['weight_decay'])
+
+            print(f" -- step ---  :  len(g_32)  : {len(g_32)} ")
             if (len(g_32) > 0):
                 state['step'] += 1
                 multi_tensor_applier(self.multi_tensor_adam, self._dummy_overflow_buf, [g_32, p_32, m_32, v_32],

@@ -36,15 +36,21 @@ else:
 
 
 def installed_cuda_version(name=""):
+    print(" builder.py  --- installed_cuda_version  ---")
     import torch.cuda
     if not torch.cuda.is_available():
         return 0, 0
     import torch.utils.cpp_extension
     cuda_home = torch.utils.cpp_extension.CUDA_HOME
+    print(f" builder.py  cuda_home : {cuda_home}")
+
     assert cuda_home is not None, "CUDA_HOME does not exist, unable to compile CUDA op(s)"
     # Ensure there is not a cuda version mismatch between torch and nvcc compiler
     output = subprocess.check_output([cuda_home + "/bin/nvcc", "-V"], universal_newlines=True)
+    print(f" builder.py subprocess.check_output([cuda_home + /bin/nvcc -V   : {output}")
+
     output_split = output.split()
+    print(f" builder.py output_split  : {output_split}")
     release_idx = output_split.index("release")
     release = output_split[release_idx + 1].replace(',', '').split(".")
     # Ignore patch versions, only look at major + minor
@@ -53,6 +59,7 @@ def installed_cuda_version(name=""):
 
 
 def get_default_compute_capabilities():
+    print(f" builder.py  get_default_compute_capabilities ")
     compute_caps = DEFAULT_COMPUTE_CAPABILITIES
     import torch.utils.cpp_extension
     if torch.utils.cpp_extension.CUDA_HOME is not None and installed_cuda_version()[0] >= 11:
@@ -77,6 +84,7 @@ cuda_minor_mismatch_ok = {
 
 
 def assert_no_cuda_mismatch(name=""):
+    print(f" builder.py  assert_no_cuda_mismatch ")
     cuda_major, cuda_minor = installed_cuda_version(name)
     if cuda_minor == 0 and cuda_major == 0:
         return False
@@ -101,6 +109,8 @@ class OpBuilder(ABC):
     _is_rocm_pytorch = None
 
     def __init__(self, name):
+        print(f" builder.py  OpBuilder  __init__ ")
+        print(f"  OpBuilder name : {name}")
         self.name = name
         self.jit_mode = False
         self.build_for_cpu = False

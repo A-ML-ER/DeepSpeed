@@ -147,6 +147,7 @@ class OpBuilder(ABC):
 
     @staticmethod
     def validate_torch_op_version(torch_info):
+        print(" validate_torch_op_version ")
         if not OpBuilder.is_rocm_pytorch():
             current_cuda_version = ".".join(torch.version.cuda.split('.')[:2])
             install_cuda_version = torch_info['cuda_version']
@@ -168,6 +169,7 @@ class OpBuilder(ABC):
 
     @staticmethod
     def is_rocm_pytorch():
+        print(" is_rocm_pytorch ")
         if OpBuilder._is_rocm_pytorch is not None:
             return OpBuilder._is_rocm_pytorch
 
@@ -187,6 +189,7 @@ class OpBuilder(ABC):
 
     @staticmethod
     def installed_rocm_version():
+        print(" installed_rocm_version ")
         if OpBuilder._rocm_version:
             return OpBuilder._rocm_version
 
@@ -252,6 +255,8 @@ class OpBuilder(ABC):
         and then distutils is used to compile that program and link it with the specified libraries.
         Returns True if both the compile and link are successful, False otherwise.
         '''
+        print(f" has_function : {funcname} ")
+
         tempdir = None  # we create a temporary directory to hold various files
         filestderr = None  # handle to open file to which we redirect stderr
         oldstderr = None  # file descriptor for stderr
@@ -353,6 +358,7 @@ class OpBuilder(ABC):
         return '-march=native'
 
     def is_cuda_enable(self):
+        print(f" ---  is_cuda_enable ----- ")
         try:
             if torch.cuda.is_available():
                 return '-D__ENABLE_CUDA__'
@@ -446,6 +452,7 @@ class OpBuilder(ABC):
                             extra_link_args=self.strip_empty_entries(self.extra_ldflags()))
 
     def load(self, verbose=True):
+        print("  --------  load  --------")
         from deepspeed.git_version_info import installed_ops, torch_info
         if installed_ops[self.name]:
             # Ensure the op we're about to load was compiled with the same
@@ -459,6 +466,7 @@ class OpBuilder(ABC):
             return self.jit_load(verbose)
 
     def jit_load(self, verbose=True):
+        print("  --------  jit_load  --------")
         if not self.is_compatible(verbose):
             raise RuntimeError(
                 f"Unable to JIT load the {self.name} op due to it not being compatible due to hardware/software issue. {self.error_log}"
@@ -527,6 +535,7 @@ class CUDAOpBuilder(OpBuilder):
 
         """
         ccs = []
+        print(" CUDAOpBuilder  compute_capability_args  ")
         if self.jit_mode:
             # Compile for underlying architectures since we know those at runtime
             for i in range(torch.cuda.device_count()):
@@ -566,6 +575,7 @@ class CUDAOpBuilder(OpBuilder):
         return args
 
     def filter_ccs(self, ccs: List[str]):
+        print(" filter_ccs  filter_ccs  ")
         """
         Prune any compute capabilities that are not compatible with the builder. Should log
         which CCs have been pruned.
@@ -573,6 +583,7 @@ class CUDAOpBuilder(OpBuilder):
         return ccs
 
     def version_dependent_macros(self):
+        print(" version_dependent_macros  ")
         # Fix from apex that might be relevant for us as well, related to https://github.com/NVIDIA/apex/issues/456
         version_ge_1_1 = []
         if (TORCH_MAJOR > 1) or (TORCH_MAJOR == 1 and TORCH_MINOR > 0):
